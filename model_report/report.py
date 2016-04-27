@@ -823,7 +823,7 @@ class ReportAdmin(object):
                                 if 'sqlite' in backend:
                                     extra_ffield.append([f, "strftime('%%Y-%%m-%%d', " + fname + ")"])
                                 elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "select " + fname + "::timestamp::date"])
+                                    extra_ffield.append([f, "cast(" + fname + "::timestamp::date as text)"])
                                 elif 'mysql' in backend:
                                     extra_ffield.append([f, "DATE(" + fname + ")"])
                                 else:
