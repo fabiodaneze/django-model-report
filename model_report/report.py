@@ -795,7 +795,7 @@ class ReportAdmin(object):
                             if flookup == 'year':
                                 if 'sqlite' in backend:
                                     extra_ffield.append([f, "strftime('%%Y', " + fname + ")"])
-                                elif 'postgres' in backend:
+                                elif 'postgres' in backend or 'postgis' in backend:
                                     extra_ffield.append([f, "cast(extract(year from " + fname + ") as integer)"])
                                 elif 'mysql' in backend:
                                     extra_ffield.append([f, "YEAR(" + fname + ")"])
@@ -804,7 +804,7 @@ class ReportAdmin(object):
                             if flookup == 'month':
                                 if 'sqlite' in backend:
                                     extra_ffield.append([f, "strftime('%%m', " + fname + ")"])
-                                elif 'postgres' in backend:
+                                elif 'postgres' in backend or 'postgis' in backend:
                                     extra_ffield.append([f, "cast(extract(month from " + fname + ") as integer)"])
                                 elif 'mysql' in backend:
                                     extra_ffield.append([f, "MONTH(" + fname + ")"])
@@ -813,7 +813,7 @@ class ReportAdmin(object):
                             if flookup == 'day':
                                 if 'sqlite' in backend:
                                     extra_ffield.append([f, "strftime('%%d', " + fname + ")"])
-                                elif 'postgres' in backend:
+                                elif 'postgres' in backend or 'postgis' in backend:
                                     extra_ffield.append([f, "cast(extract(day from " + fname + ") as integer)"])
                                 elif 'mysql' in backend:
                                     extra_ffield.append([f, "DAY(" + fname + ")"])
