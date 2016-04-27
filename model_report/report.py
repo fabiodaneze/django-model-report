@@ -790,7 +790,7 @@ class ReportAdmin(object):
                         if is_date_field(field):
                             fname, flookup = f.rsplit('__', 1)
                             fname = fname.split('__')[-1]
-                            if not flookup in ('year', 'month', 'day'):
+                            if not flookup in ('year', 'month', 'day', 'date'):
                                 break
                             if flookup == 'year':
                                 if 'sqlite' in backend:
@@ -817,6 +817,15 @@ class ReportAdmin(object):
                                     extra_ffield.append([f, "cast(extract(day from " + fname + ") as integer)"])
                                 elif 'mysql' in backend:
                                     extra_ffield.append([f, "DAY(" + fname + ")"])
+                                else:
+                                    raise NotImplemented  # mysql
+                            if flookup == 'date':
+                                if 'sqlite' in backend:
+                                    extra_ffield.append([f, "strftime('%%Y-%%m-%%d', " + fname + ")"])
+                                elif 'postgres' in backend or 'postgis' in backend:
+                                    extra_ffield.append([f, "select " + fname + "::timestamp::date"])
+                                elif 'mysql' in backend:
+                                    extra_ffield.append([f, "DATE(" + fname + ")"])
                                 else:
                                     raise NotImplemented  # mysql
                         break
