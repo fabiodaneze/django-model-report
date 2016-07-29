@@ -794,38 +794,38 @@ class ReportAdmin(object):
                                 break
                             if flookup == 'year':
                                 if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%Y', " + fname + ")"])
+                                    extra_ffield.append([f, "strftime('%%Y', " + self.model._meta.db_table + "." + fname + ")"])
                                 elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(extract(year from " + fname + ") as integer)"])
+                                    extra_ffield.append([f, "cast(extract(year from " + self.model._meta.db_table + "." + fname + ") as integer)"])
                                 elif 'mysql' in backend:
-                                    extra_ffield.append([f, "YEAR(" + fname + ")"])
+                                    extra_ffield.append([f, "YEAR(" + self.model._meta.db_table + "." + fname + ")"])
                                 else:
                                     raise NotImplemented  # mysql
                             if flookup == 'month':
                                 if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%m', " + fname + ")"])
+                                    extra_ffield.append([f, "strftime('%%m', " + self.model._meta.db_table + "." + fname + ")"])
                                 elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(extract(month from " + fname + ") as integer)"])
+                                    extra_ffield.append([f, "cast(extract(month from " + self.model._meta.db_table + "." + fname + ") as integer)"])
                                 elif 'mysql' in backend:
-                                    extra_ffield.append([f, "MONTH(" + fname + ")"])
+                                    extra_ffield.append([f, "MONTH(" + self.model._meta.db_table + "." + fname + ")"])
                                 else:
                                     raise NotImplemented  # mysql
                             if flookup == 'day':
                                 if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%d', " + fname + ")"])
+                                    extra_ffield.append([f, "strftime('%%d', " + self.model._meta.db_table + "." + fname + ")"])
                                 elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(extract(day from " + fname + ") as integer)"])
+                                    extra_ffield.append([f, "cast(extract(day from " + self.model._meta.db_table + "." + fname + ") as integer)"])
                                 elif 'mysql' in backend:
-                                    extra_ffield.append([f, "DAY(" + fname + ")"])
+                                    extra_ffield.append([f, "DAY(" + self.model._meta.db_table + "." + fname + ")"])
                                 else:
                                     raise NotImplemented  # mysql
                             if flookup == 'date':
                                 if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%Y-%%m-%%d', " + fname + ")"])
+                                    extra_ffield.append([f, "strftime('%%Y-%%m-%%d', " + self.model._meta.db_table + "." + fname + ")"])
                                 elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(" + fname + "::timestamp::date as text)"])
+                                    extra_ffield.append([f, "cast(" + self.model._meta.db_table + "." + fname + "::timestamp::date as text)"])
                                 elif 'mysql' in backend:
-                                    extra_ffield.append([f, "DATE(" + fname + ")"])
+                                    extra_ffield.append([f, "DATE(" + self.model._meta.db_table + "." + fname + ")"])
                                 else:
                                     raise NotImplemented  # mysql
                         break
