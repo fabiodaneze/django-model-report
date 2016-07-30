@@ -225,6 +225,10 @@ class ReportAdmin(object):
     """ Dictionary of fields that are aggregated to the query.
     Format {field_name: Field instance}"""
 
+    fixed_filter = {}
+    """ Dictionary of fixed filter fields
+    Format {field_name: field_value}"""    
+
     always_show_full_username = False
 
     def __init__(self, parent_report=None, request=None):
@@ -380,7 +384,10 @@ class ReportAdmin(object):
         Return the the queryset
         """
         qs = self.model.objects.all()
-        for selected_field, field_value in filter_kwargs.items():
+        args = filter_kwargs
+        args.update(self.fixed_filter)
+        # args.extend(self.fixed_filter)
+        for selected_field, field_value in args.items():
             if not field_value is None and field_value != '':
                 if hasattr(field_value, 'values_list'):
                     field_value = field_value.values_list('pk', flat=True)
@@ -645,7 +652,12 @@ class ReportAdmin(object):
 
                 # Provide a hook for updating the queryset
                 if hasattr(field, 'queryset') and k in self.override_field_choices:
-                    field.queryset = self.override_field_choices.get(k)(self, field.queryset)
+                    field_choice = self.override_field_choices.get(k)
+                    if field_choice == '':
+                        form_fields.pop(k)
+                        field = forms.CharField()
+                    else:
+                        field.queryset = field_choice(self, field.queryset)
                 form_fields[k] = field
 
         FilterFormClass = type('FilterFormBase', (FilterForm,), {'base_fields': form_fields})
@@ -771,6 +783,70 @@ class ReportAdmin(object):
             attr = attr()
         return attr
 
+    def date_sql(self, backend, f, fname, flookup, table_name=None):
+        try:
+            column_name = ''
+            if table_name:
+                column_name = table_name + "." + fname
+            else:
+                column_name = fname
+            sql = None
+            if flookup == 'year':
+                if 'sqlite' in backend:
+                    sql = [f, "strftime('%%Y', " + column_name + ")"]
+                elif 'postgres' in backend or 'postgis' in backend:
+                    sql = [f, "cast(extract(year from " + column_name + ") as integer)"]
+                elif 'mysql' in backend:
+                    sql = [f, "YEAR(" + column_name + ")"]
+                else:
+                    raise NotImplemented  # mysql
+            if flookup == 'month':
+                if 'sqlite' in backend:
+                    sql = [f, "strftime('%%m', " + column_name + ")"]
+                elif 'postgres' in backend or 'postgis' in backend:
+                    sql = [f, "cast(extract(month from " + column_name + ") as integer)"]
+                elif 'mysql' in backend:
+                    sql = [f, "MONTH(" + column_name + ")"]
+                else:
+                    raise NotImplemented  # mysql
+            if flookup == 'day':
+                if 'sqlite' in backend:
+                    sql = [f, "strftime('%%d', " + column_name + ")"]
+                elif 'postgres' in backend or 'postgis' in backend:
+                    sql = [f, "cast(extract(day from " + column_name + ") as integer)"]
+                elif 'mysql' in backend:
+                    sql = [f, "DAY(" + column_name + ")"]
+                else:
+                    raise NotImplemented  # mysql
+            if flookup == 'date':
+                if 'sqlite' in backend:
+                    sql = [f, "strftime('%%Y-%%m-%%d', " + column_name + ")"]
+                elif 'postgres' in backend or 'postgis' in backend:
+                    sql = [f, "cast(" + column_name + "::timestamp::date as text)"]
+                elif 'mysql' in backend:
+                    sql = [f, "DATE(" + column_name + ")"]
+                else:
+                    raise NotImplemented  # mysql
+            return sql
+        except BaseException, e:
+            if table_name == None:
+                return date_sql(backend,f,fname,flookup,self.model._meta.db_table)
+            else:
+                raise NotImplemented
+
+    def get_table_name(self, flookup, meta=None):
+        if meta is None:
+            meta = self.model._meta
+        flist = flookup.split('__')
+        fname = flist[0]
+        for field in meta.fields:
+            if field.name == fname:
+                if isinstance(field, ForeignKey):
+                    flist.pop(0)
+                    return self.get_table_name('__'.join(flist), field.rel.to._meta)
+                break
+        return meta.db_table
+
     def get_rows(self, groupby_data=None, filter_kwargs={}, filter_related_fields={}):
         report_rows = []
 
@@ -792,42 +868,8 @@ class ReportAdmin(object):
                             fname = fname.split('__')[-1]
                             if not flookup in ('year', 'month', 'day', 'date'):
                                 break
-                            if flookup == 'year':
-                                if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%Y', " + self.model._meta.db_table + "." + fname + ")"])
-                                elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(extract(year from " + self.model._meta.db_table + "." + fname + ") as integer)"])
-                                elif 'mysql' in backend:
-                                    extra_ffield.append([f, "YEAR(" + self.model._meta.db_table + "." + fname + ")"])
-                                else:
-                                    raise NotImplemented  # mysql
-                            if flookup == 'month':
-                                if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%m', " + self.model._meta.db_table + "." + fname + ")"])
-                                elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(extract(month from " + self.model._meta.db_table + "." + fname + ") as integer)"])
-                                elif 'mysql' in backend:
-                                    extra_ffield.append([f, "MONTH(" + self.model._meta.db_table + "." + fname + ")"])
-                                else:
-                                    raise NotImplemented  # mysql
-                            if flookup == 'day':
-                                if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%d', " + self.model._meta.db_table + "." + fname + ")"])
-                                elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(extract(day from " + self.model._meta.db_table + "." + fname + ") as integer)"])
-                                elif 'mysql' in backend:
-                                    extra_ffield.append([f, "DAY(" + self.model._meta.db_table + "." + fname + ")"])
-                                else:
-                                    raise NotImplemented  # mysql
-                            if flookup == 'date':
-                                if 'sqlite' in backend:
-                                    extra_ffield.append([f, "strftime('%%Y-%%m-%%d', " + self.model._meta.db_table + "." + fname + ")"])
-                                elif 'postgres' in backend or 'postgis' in backend:
-                                    extra_ffield.append([f, "cast(" + self.model._meta.db_table + "." + fname + "::timestamp::date as text)"])
-                                elif 'mysql' in backend:
-                                    extra_ffield.append([f, "DATE(" + self.model._meta.db_table + "." + fname + ")"])
-                                else:
-                                    raise NotImplemented  # mysql
+                            table_name = self.get_table_name(f)
+                            extra_ffield.append(self.date_sql(backend,f,fname, flookup, table_name))
                         break
         obfields = list(self.list_order_by)
         if groupby_data and groupby_data['groupby']:
