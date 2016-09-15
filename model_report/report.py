@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.utils.translation import ugettext_lazy as _
-from django.db.models.fields import DateTimeField, DateField
+from django.db.models.fields import DateTimeField, DateField, TextField, CharField
 from django.utils.encoding import force_unicode
 from django.db.models import Q
 from django import forms
@@ -120,6 +120,11 @@ def is_date_field(field):
     """ Returns True if field is DateField or DateTimeField,
     otherwise False """
     return isinstance(field, DateField) or isinstance(field, DateTimeField)
+
+def is_text_field(field):
+    """ Returns True if field is TextField or CharField,
+    otherwise False """
+    return isinstance(field, TextField) or isinstance(field, CharField)
 
 
 def get_model_name(model):
@@ -387,6 +392,7 @@ class ReportAdmin(object):
         args = filter_kwargs
         args.update(self.fixed_filter)
         # args.extend(self.fixed_filter)
+
         for selected_field, field_value in args.items():
             if not field_value is None and field_value != '':
                 if hasattr(field_value, 'values_list'):
@@ -408,6 +414,11 @@ class ReportAdmin(object):
                             field_value = field_value[0]
                     else:
                         pass
+                for field in self.model_fields:
+                    if field[1] == selected_field:
+                        if is_text_field(field[0]):
+                            selected_field = selected_field + '__icontains'
+                        break
                 qs = qs.filter(Q(**{selected_field: field_value}))
         self.query_set = qs.distinct()
         return self.query_set
